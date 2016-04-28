@@ -1,0 +1,46 @@
+--- #installation et config de postgresql
+- hosts: aptserver
+  user: test
+  sudo: yes
+  connection: ssh
+  gather_facts: no
+  tasks:
+    - name: updating 
+      raw: apt-get update
+    - name: Installation Postgresql
+      apt: name={{item}} state=installed
+      with_items:
+        - postgresql
+        - libpq-dev
+        - python-psycopg2
+      notify: start postgresql 
+  handlers:
+       - name: start postgresql
+         service: name=postgresql state=restarted
+
+- hosts: aptserver
+  sudo: yes
+  sudo_user: postgres
+  gather_facts: no  
+  vars:
+    dbname: ansibledb
+    dbuser: controller
+    dbpassword: ansiblepassword
+
+  tasks:
+    - name: Verification de la création de la base de donnees
+      postgresql_db: name={{ dbname }}
+
+    - name: Verification de l acces de l utilisateur a la base
+      postgresql_user: db={{ dbname }} name={{ dbuser }} password={{ dbpassword }} priv=ALL
+
+    - name: Creation table
+      command: psql -U controller ansibledb -c 'CREATE TABLE IF NOT EXISTS tableFaika4 (name varchar(20), age varchar(10));'
+    - name: Insertion dans la table 
+      command: psql -U controller ansibledb -c "INSERT INTO tableFaika4 VALUES ('fayou','27');"
+    - name: Affichage table
+      command: psql -U controller ansibledb -c "select * from tableFaika4;"
+      register: res_select
+    - debug: var=res_select
+
+ 
